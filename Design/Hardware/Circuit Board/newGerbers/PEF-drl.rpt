@@ -1,0 +1,30 @@
+Drill report for PEF.kicad_pcb
+Created on lun 12 dic 2022 07:14:22
+
+Copper Layer Stackup:
+    =============================================================
+    L1 :  F.Cu                      front
+    L2 :  B.Cu                      back
+
+
+Drill file 'PEF-PTH.drl' contains
+    plated through holes:
+    =============================================================
+    T1  0,750mm  0,0295"  (30 holes)
+    T2  0,800mm  0,0315"  (28 holes)
+    T3  1,000mm  0,0394"  (50 holes)
+    T4  1,100mm  0,0433"  (11 holes)
+    T5  1,200mm  0,0472"  (2 holes)
+    T6  1,300mm  0,0512"  (4 holes)
+    T7  1,400mm  0,0551"  (12 holes)
+    T8  1,600mm  0,0630"  (2 holes)
+
+    Total plated holes count 139
+
+
+Drill file 'PEF-NPTH.drl' contains
+    unplated through holes:
+    =============================================================
+    T1  5,000mm  0,1969"  (3 holes)
+
+    Total unplated holes count 3

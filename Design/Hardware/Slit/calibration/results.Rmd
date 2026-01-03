@@ -1,0 +1,59 @@
+---
+title: "Analysis of slit width"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(car)
+```
+```{r}
+Width = c(1000,950,900,850,750,700,650,600,550,500,450,400,350,300,250,200,150,100,95,90,85,80)
+measMedDir = list.files("resultados/medio/")
+measMedDir = paste("resultados/medio/",measMedDir,sep = "")
+med = map(measMedDir,read_csv)
+med %>% map(nrow) %>% unlist() %>% table()
+med = map(med,function(x){if(nrow(x)<13){rbind(rep(0,7),x)}else {x}})
+med %>% map(nrow) %>% unlist() %>% table()
+Width = Width[1:13] %>% sort()
+med = map(med,select,Length) %>% map(mutate, width = Width)
+med = lapply(1:length(med), function(x){med[[x]]%>% mutate(slitN = x)}) %>% bind_rows()
+med$slitN = med$slitN %>% as.factor() 
+```
+
+```{r}
+medByPWidth = med %>% group_by(width) %>% summarise(mean = mean(Length),sd = sd(Length))
+ggplot(medByPWidth,aes(width,mean)) + geom_point(size = 2) + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width = 0.05) +  geom_rect(aes(xmin = 325, xmax = 375, ymin = -20, ymax = 150), 
+            fill = "red", alpha = 0.05)
+ggplot(med,aes(slitN,Length)) + geom_boxplot()
+leveneTest(medSelect$Length,medSelect$width)
+```
+
+```{r}
+medSelect = med[med$width > 350,]
+ggplot(medSelect,aes(width,Length)) + geom_point() 
+poly1 = lm(Length ~ poly(width,1),data = medSelect)
+poly1 %>% summary()
+poly1 %>% plot()
+```
+```{r}
+poly2 = lm(Length ~ poly(width,2),data = medSelect)
+poly2 %>% summary()
+poly2 %>% plot()
+```
+```{r}
+
+poly3 = lm(Length ~ poly(width,3),data = medSelect)
+poly3 %>% summary()
+poly3 %>% plot()
+poly3$residuals %>% leveneTest(medSelect$width)
+AIC(poly1,poly2,poly3)
+```
+```{r}
+
+reversed = lm(width ~ poly(Length,3),data = medSelect)
+reversed %>% summary()
+reversed %>% plot()
+```
+

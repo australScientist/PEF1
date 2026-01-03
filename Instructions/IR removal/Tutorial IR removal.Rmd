@@ -1,0 +1,23 @@
+---
+title: "IR filter removal tutorial"
+author: "Guido Marconi"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+print(getwd())
+```
+
+# How to remove IR filter from V1.3 raspberry pi cameras?
+
+Though the process is straight foward for V2 cameras and there's even a no-IR filter alternative, this is not the case for V1.3 cameras. Thus, the intent of this tutorial is to describe the necesary steps to remove the lens and the IR filter of the camera so it serves its role as the sensor.
+
+Basically, the goal is to go through the steps necessary to do this transition: 
+
+![original camera](./IMG_20221124_111632285.jpg){width=40%} <font size=15>⮕  </font> ![final sensor](./IMG_20221124_120645879.jpg){width=40%}
+
+The first caution you need to have is that of static discharges. If you have static wrist band or another caution device, use them. Any discharge can damage or permanently break your camera. If you don't have that kind of element you can also be bearfooted touching the ground wile working. 
+
+

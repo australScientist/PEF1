@@ -1,0 +1,206 @@
+---
+title: "Sensor response"
+author: "Guido Marconi"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(reticulate)
+library(gganimate)
+renv::use_python()
+library(pls)
+reticulate::source_python("analize.py")
+```
+
+```{python PySetup, include=FALSE}
+#import matplotlib as mpl
+import numpy as np
+#import matplotlib.pyplot as plt
+from scipy.signal import correlate
+import rawpy
+import os
+
+import numpy as np
+from scipy.signal import correlate
+import rawpy
+#from numpy import savetxt
+import os
+
+def get_pixel_shift(A, B):
+    # regularize datasets by subtracting mean and dividing by s.d.
+    A = A - A.mean()
+    A = A / A.std()
+    B = B - B.mean()
+    B = B / B.std()
+    xcorr = correlate(A, B)
+    # delta time array to match xcorr
+    nsamples = A.size
+    dt = np.arange(1 - nsamples, nsamples)
+    recovered_time_shift = dt[xcorr.argmax()]
+    return (recovered_time_shift)
+def align_spectra(F):
+    size = len(F[:, 0])
+    Out = F[:, :]  # select first row
+    A = F[0, :]  # select first row
+    for i in range(1, size):  # and then iterate through the rest, comparing against the first
+        B = F[i, :]
+        shift = get_pixel_shift(B, A)
+        # calculates the lag between both rows
+        Out[i, :] = np.roll(F[i, :],-shift)  # then shifts the row to match both spectra, replacing the spectrum in the original data
+    return (Out)
+
+def get_spectrum(pathToPhoto):
+    raw = rawpy.imread(pathToPhoto)
+    rgb = raw.postprocess(demosaic_algorithm=0,gamma=(1,1), no_auto_bright=True, output_bps=16)
+    Signal = rgb[0:450,:,0]+rgb[0:450,:,1]+rgb[0:450,:,2]
+    Aligned = align_spectra(Signal)
+    SpectrumFull = np.mean(Aligned[:,0:2560],axis=0)
+    test = np.reshape(SpectrumFull,(512,5))
+    Spectrum = np.mean(test,axis=1)
+    return(Spectrum)
+```
+
+## Characterising the sensor response curve
+
+There are three parameters that contribute to the signal: the gain on the amplifier, the exposure or shutter time and the actual flux of light. In this section I'll explore these parameters with the goal of achieving a stable signal that responds linearly to changes in light conditions. 
+
+
+### Light and exposure time:
+
+The first thing to do is to find saturating conditions that allow for subsequent fine tuning. The first experiment consisted on measuring light at increasing exposure times with 10 ms increments, from 10 to 970 ms. This was done with full light intensity and a gain of 1 (default). From visual inspection already it can be seen that between 40 ms and 50 ms the image starts to show burned pixels, thus to saturate. 
+ 
+ ![40ms](measurement40000.png?raw=true "10 ms").
+  
+ ![50 ms](measurement50000.png?raw=true "50 ms").
+ 
+ ![970 ms](measurement970000.png?raw=true "970 ms").
+ 
+ This is confirmed when the spectra are ploted according to the exposure time:
+
+``` {r}
+files = paste0("Data/SingalVsTime Long/",list.files("Data/SingalVsTime Long/"))[c(-1,-99)]
+expTimes = files %>% str_extract(pattern = regex("[:digit:]+"))
+spectra = map(files,py$get_spectrum) %>% bind_cols()
+spectra = t(spectra) %>% as_tibble()
+colnames(spectra) = 1:512
+spectra$expTimes = expTimes
+gathered = spectra %>% gather("pixel","signal",1:512)
+gathered$expTimes = gathered$expTimes %>% as.numeric()
+gathered$pixel = gathered$pixel %>% as.numeric()
+ggplot(gathered,aes(pixel,signal)) + geom_line() + transition_states(expTimes) + labs(title = "Exposure time: {closest_state} us") 
+```
+Now that the saturating conditions were found, the response of the signal to variations in the exposure time can be explored. This was done by measuring the signal at a fixed gain of 1 and full light intensity at 1 ms intervals from 1 to 49 ms.
+
+``` {r}
+files = paste0("Data/SignalVsTime2/",list.files("Data/SignalVsTime2/"))#[-1]
+expTimes = files %>% str_extract(pattern = regex("[:digit:]+(?=.d)")) %>% as.numeric()
+spectra = map(files,py$get_spectrum) %>% bind_cols()
+spectra = t(spectra) %>% as_tibble()
+colnames(spectra) = 1:512
+spectra$expTimes = expTimes
+gathered = spectra %>% gather("pixel","signal",1:512)
+gathered$expTimes = gathered$expTimes %>% as.numeric()
+gathered$pixel = gathered$pixel %>% as.numeric()
+ggplot(gathered,aes(pixel,signal)) + geom_line() + transition_states(expTimes) + labs(title = "Exposure time: {closest_state} us") 
+```
+
+``` {r}
+files = paste0("Data/PWM and time/20000/",list.files("Data/PWM and time/20000/"))
+percLight = files %>% str_extract(pattern = regex("(?<=_)([:digit:].[:digit:]+)")) %>% as.numeric()
+spectra = map(files,py$get_spectrum) %>% bind_cols()
+spectra = t(spectra) %>% as_tibble()
+colnames(spectra) = 1:512
+spectra$percLight = percLight
+gathered = spectra %>% gather("pixel","signal",1:512)
+gathered$pixel = gathered$pixel %>% as.numeric()
+ggplot(gathered,aes(pixel,signal)) + geom_line() + transition_states(percLight*100) + labs(title = "Exposure time: {closest_state} %") 
+ggplot(gathered, aes(pixel,signal,colour = percLight %>% as.factor())) + geom_line()
+
+files = paste0("Data/PWM and time/40000/",list.files("Data/PWM and time/40000/"))
+percLight = files %>% str_extract(pattern = regex("(?<=_)([:digit:].[:digit:]+)")) %>% as.numeric()
+spectra = map(files,py$get_spectrum) %>% bind_cols()
+spectra = t(spectra) %>% as_tibble()
+colnames(spectra) = 1:512
+spectra$percLight = percLight
+gathered = spectra %>% gather("pixel","signal",1:512)
+gathered$pixel = gathered$pixel %>% as.numeric()
+ggplot(gathered, aes(pixel %>% as.numeric(),signal,colour = percLight %>% as.factor())) + geom_line()
+```
+``` {r}
+files = paste0("Data/SignalVsTimeVsGain/",list.files("Data/SignalVsTimeVsGain/"))
+Gains = files %>% str_extract(pattern = regex("[:digit:]")) %>% as.numeric()
+expTimes = files %>% str_extract(pattern = regex("[:digit:]+(?=.d)")) %>% as.numeric()
+spectra = map(files,py$get_spectrum) %>% bind_cols()
+spectra = t(spectra) %>% as_tibble()
+colnames(spectra) = 1:512
+spectra$expTimes = expTimes
+spectra$gains = Gains
+spectra = spectra[spectra$expTimes != 0,]
+gathered = spectra %>% gather("pixel","signal",1:512)
+gathered$expTimes = gathered$expTimes %>% as.numeric()
+gathered$pixel = gathered$pixel %>% as.numeric()
+gathered$gains = gathered$gains %>% as.factor()
+ggplot(gathered,aes(pixel,signal)) + geom_line() + facet_wrap(~gains) + transition_states(expTimes) + labs(title = "Exposure time: {closest_state} us") 
+ggplot(gathered[gathered$pixel == 200,],aes(expTimes,signal)) + geom_line() + facet_wrap(~gains)
+```
+
+
+``` {r}
+files = paste0("Data/rep/",list.files("Data/rep/"))#[-1]
+expTimes = files %>% str_extract(pattern = regex("[:digit:]+(?=.d)")) %>% as.numeric()
+spectra = map(files,py$get_spectrum) %>% bind_cols()
+spectra = t(spectra) %>% as_tibble()
+colnames(spectra) = 1:512
+spectra$expTimes = expTimes
+gathered = spectra %>% gather("pixel","signal",1:512)
+gathered$expTimes = gathered$expTimes %>% as.numeric()
+gathered$pixel = gathered$pixel %>% as.numeric()
+ggplot(gathered,aes(pixel,signal)) + geom_line() + transition_states(expTimes) + labs(title = "Exposure time: {closest_state} us") 
+(apply(spectra, 2, sd)/colMeans(spectra) )%>% .[1:512] %>% plot()
+```
+
+``` {r}
+library(rjson)
+
+Results = jsonlite::read_json("Data/results.json")
+Spectra = Results %>% map(function(x){x[["spectrum"]]})
+Tags = Results %>% map(function(x){x[["tag"]]})
+Results[[1]][["spectrum"]]
+
+Spectra = Spectra %>% map(function(x){x %>% unlist %>% return()}) %>% unlist() %>% matrix(byrow = TRUE,ncol = 512) %>% as_tibble()
+colnames(Spectra) = 1:512
+Spectra$Tag = Tags %>% map(function(x){x %>% unlist %>% return()}) %>% unlist()
+Spectra = separate(Spectra,Tag,into = c("camera","light","percent"),sep = "-")
+GatheredSpectra = gather(Spectra,"pixel","Value",1:512)
+
+GatheredSpectra$pixel = as.numeric(GatheredSpectra$pixel)
+GatheredSpectra$percent = as.numeric(GatheredSpectra$percent)
+GatheredSpectra$camera = as.factor(GatheredSpectra$camera)
+GatheredSpectra$light = as.factor(GatheredSpectra$light)
+#filter(GatheredSpectra,camera == 1) %>% ggplot(aes(pixel,Value,colour = light)) + geom_line() #+ facet_wrap(~light)
+
+GatheredSpectra %>% ggplot(aes(pixel,Value,colour = percent %>% as.factor())) + geom_line() + facet_grid(rows = vars(light),cols = vars(camera))
+```
+
+``` {r}
+#PercMean = Spectra %>% group_by(percent) %>% select(-camera,-light) %>%  summarise_all(mean)
+#gather(PercMean,pixel,value,2:513) %>% ggplot(aes(pixel %>% as.numeric(),value %>% as.numeric(),colour = as.factor(percent))) + geom_line()
+
+filter(GatheredSpectra,camera == 1,light == 1,pixel == 300) %>% ggplot(aes(Value,percent)) + geom_line() 
+nestedSpectra = Spectra %>% group_by(light,camera) %>% nest()
+library(pls)
+PLSR = function(x){
+  model = pls::plsr(percent ~ ., data = x, ncomp = 1, validation = "LOO")
+  return(model)
+}
+models = nestedSpectra$data %>% map(PLSR)
+par(mfrow= c(2,5))
+for(i in 1:10){
+  plot(models[[i]])
+}
+par(mfrow= c(1,1))
+```
+

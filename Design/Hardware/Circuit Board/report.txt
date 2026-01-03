@@ -1,0 +1,11 @@
+Plotted to '/media/guido/Olguimers/placa/PEF/PEF-F_Cu.gbr'.
+Plotted to '/media/guido/Olguimers/placa/PEF/PEF-B_Cu.gbr'.
+Plotted to '/media/guido/Olguimers/placa/PEF/PEF-F_Paste.gbr'.
+Plotted to '/media/guido/Olguimers/placa/PEF/PEF-B_Paste.gbr'.
+Plotted to '/media/guido/Olguimers/placa/PEF/PEF-F_Silkscreen.gbr'.
+Plotted to '/media/guido/Olguimers/placa/PEF/PEF-B_Silkscreen.gbr'.
+Plotted to '/media/guido/Olguimers/placa/PEF/PEF-F_Mask.gbr'.
+Plotted to '/media/guido/Olguimers/placa/PEF/PEF-B_Mask.gbr'.
+Plotted to '/media/guido/Olguimers/placa/PEF/PEF-Edge_Cuts.gbr'.
+Created Gerber job file '/media/guido/Olguimers/placa/PEF/PEF-job.gbrjob'.
+Info: Done.

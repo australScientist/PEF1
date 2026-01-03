@@ -1,0 +1,33 @@
+trubleshooting in case you have to install everything da capo
+
+usual problems: 
+
+don't trust the pip3 -r install requirements.txt, it doesn't work. It's trublesome but go on installing each dependency one by one
+
+Install cmake
+sudo apt-get install cmake
+
+Numpy doesn't work. You have to install this library by doing 
+- sudo apt install libatlas3-base
+
+Scipi has to be installed from apt
+-sudo apt install -y python3-scipy
+
+rawpy has to be installed from source by making:
+
+-sudo apt-get install libraw-dev
+-git clone https://github.com/LibRaw/LibRaw.git libraw
+-git clone https://github.com/LibRaw/LibRaw-cmake.git libraw-cmake
+-cd libraw
+-git checkout 0.20.0
+-cp -R ../libraw-cmake/* .
+-cmake .
+-sudo make install
+-git clone https://github.com/letmaik/rawpy
+-cd rawpy
+-pip install numpy cython
+-pip install .
+
+
+
+

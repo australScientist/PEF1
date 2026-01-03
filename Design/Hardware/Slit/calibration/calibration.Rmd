@@ -1,0 +1,113 @@
+---
+title: "Analysis of slit width"
+author: "Guido"
+date: '2022-09-08'
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(car)
+```
+The following experiment was performed to assess the feasiblity of manufacturing the slits with the 3d printer Creality Ender 3 V2 in a repetible fashion. The first problem to be asnwered was what is the minimum width that can be printed. There is mismatch between what is explicited in the design and the real output that is caused by many factors such as the limitations of the printer, expansion and contraction of the extruded plastic, etc. Because of this the printer was "calibrated" to learn: the minimum width that can be printed in a reproducible way, the relationship between design parameters and printed output. To this end a plate with slits of different widths between 80 and 1000 um was designed in freecad (n = 22). The printing parameters were specified in the corresponding m3f file. 10 replicates of the plates were printed at different times using PETG as print material (grilon). The slits' were micrographed with a Leica microscope at 10X and widths at the middle of the grooves were measured with a Fiji. Observations: 
+
+- Micrographs of one of the replicates were tilted and slightly out of focus. This resulted in the imposibility of imposibility of measuring distances in a reproducible way. Because of this they were discarded. 
+
+- From all the widths tested, just the largest 13 resulted in non zero sized grooves.
+
+- As the width of the slit decreased, the length did the same. The original design was 5 mm and the slimmest grooves wad a length of around 3 mm. This makes emphasises the need to increase the design spec. from 3 to 5 mm in order to compensate for eventual shrinkage. 
+
+```{r include=FALSE}
+Width = c(1000,950,900,850,750,700,650,600,550,500,450,400,350,300,250,200,150,100,95,90,85,80)
+measMedDir = list.files("resultados/medio/")
+measMedDir = paste("resultados/medio/",measMedDir,sep = "")
+measMedDir = measMedDir[-1]
+med = map(measMedDir,read_csv)
+med %>% map(nrow) %>% unlist() %>% table()
+med = map(med,function(x){if(nrow(x)<13){rbind(rep(0,7),x)}else {x}})
+med %>% map(nrow) %>% unlist() %>% table()
+Width = Width[1:13] %>% sort()
+med = map(med,select,Length) %>% map(mutate, width = Width)
+med = lapply(1:length(med), function(x){med[[x]]%>% mutate(slitN = x)}) %>% bind_rows()
+med$slitN = med$slitN %>% as.factor() 
+```
+As can be seen in the graphs there is a systematic mismatch between the design specification and the resulting width. The smallest specification (350 um) resulted in a closed groove in 4 out of 9 replicas. This reflects not only on the trend, but also in a higher variance. This already indicates a lower boundary at which the fabrication technique looses reproducibility. Because of this, all measurements corresponding to this widths were discarded for future analyses. The variability in the width produced by the fabrication technique is equal regardless of the size of the hole as proved by the levene test 
+
+```{r}
+medByPWidth = med %>% group_by(width) %>% summarise(mean = mean(Length),sd = sd(Length))
+ggplot(medByPWidth,aes(width,mean)) + geom_point(size = 2) + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width = 0.05) +  geom_rect(aes(xmin = 325, xmax = 375, ymin = -20, ymax = 150), 
+            fill = "red", alpha = 0.05)
+medSelect = med[med$width > 350,]
+leveneTest(medSelect$Length,medSelect$width)
+```
+As can be seen by the plot and explored by a model. The fabrication technique is fairly reproducible, yielding in comparable mean widths. The residuals didn't have normal distribution so a Kruskal-Wallis test was applied
+```{r}
+ggplot(med,aes(slitN,Length)) + geom_boxplot()
+group = lm(Length ~ slitN,data = medSelect)
+group %>% summary()
+par(mfrow =c(2,2) )
+group %>% plot()
+shapiro.test(group$residuals)
+group = kruskal.test(Length ~ slitN,data = medSelect)
+group
+```
+To assess the functional relation between the design specification and output, a series of linear models were built and evaluated. The final model was built using a 3rd degree polynomial because it met all assumptions of LM and had the lowest AIC. 
+
+first degree has a pattern in the residuals with a parabolic shape, indicating the need for a sqare term.
+```{r}
+
+ggplot(medSelect,aes(width,Length)) + geom_point() 
+poly1 = lm(Length ~ poly(width,1),data = medSelect)
+poly1 %>% summary()
+par(mfrow =c(2,2) )
+poly1 %>% plot()
+```
+
+In the case of the 2nd degree it exhibited an s shape parameter with 3 intercepts, indicating that a 3rd order term may be necesary.
+
+```{r}
+poly2 = lm(Length ~ poly(width,2),data = medSelect)
+poly2 %>% summary()
+par(mfrow =c(2,2) )
+poly2 %>% plot()
+```
+Finally, we are there
+
+```{r}
+
+poly3 = lm(Length ~ poly(width,3),data = medSelect)
+poly3 %>% summary()
+par(mfrow =c(2,2) )
+poly3 %>% plot()
+poly3$residuals %>% leveneTest(medSelect$width)
+poly3$residuals %>% shapiro.test()
+AIC(poly1,poly2,poly3)
+ggplot(data = medSelect,aes(width,Length)) + geom_point() + geom_smooth(method="lm",formula = y ~ poly(x,3)) + ylab("Real Width (um)") + xlab("Predicted width (um)") + geom_text(aes(x = 500 ,y = 750 ,label = "R² = 0.9868")) 
+```
+
+Now, the reverse model is built to predict the design specification needed to achieve a desired width. Despite the model has a standard error of prediction of 22.22 um, the experimental data suggest that that may be an overly optimistic estimate.
+```{r}
+
+reversed = lm(width ~ poly(Length,3),data = medSelect)
+reversed %>% summary()
+par(mfrow =c(2,2) )
+reversed %>% plot()
+```
+To avoid being too close to the lowest value and taking into account the standard error, a width that has good chances of working could be a value in between those resulting for a specification of 400 um and 450 um. The resulting specification will be 424 um
+
+```{r}
+aim = medSelect[medSelect$width < 451,1] %>% unlist() %>% mean()
+predict(reversed,tibble(Length = 200)) %>% round()
+```
+To test the results, a pull of 20 plates were printed. From the first to this experiment, the plastic was used from a different batch and the plate was re-leveled. From the pull, 16 had open slits. Out of these 16, only 13 resulted in truly viable options since 3 presented small imperfections such as small obstruction of the light path or a sudden increase in the width. None the less, their values were used for statistics. The equality in means between the value predicted with the model and the final result proves that the printer can be used to manufacture the plates. The only observation worth mentioning is the results were more variable than the results used for the claibration.
+```{r}
+resultados = read_csv("resultados/resultados.csv")
+resultados$Length %>% summary()
+ggplot(resultados,aes(Length)) + geom_histogram(aes(y =..density..),binwidth = 21) +
+  stat_function(fun = dnorm, args = list(mean = mean(resultados$Length), sd = sd(resultados$Length)))+ geom_vline(aes(xintercept = 200,colour = "Desired width"))+ geom_vline(aes(xintercept = mean(resultados$Length),colour = "Result")) + xlab(label = "Width (um)") + geom_text(aes(x = 250, y = 0.01,label = "p val = 0.7952"))
+resultados$Length %>% shapiro.test()
+resultados$Length %>% sd()
+t.test(resultados$Length,mu = 200)
+sd(resultados$Length)/mean(resultados$Length) 
+
+var.test(resultados$Length,reversed$residuals)
+```

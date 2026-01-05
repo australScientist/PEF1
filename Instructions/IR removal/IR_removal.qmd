@@ -1,0 +1,109 @@
+---
+title: "Tutorial: Removing the IR Filter from a Raspberry Pi Camera V1.3"
+format: pdf
+editor: visual
+---
+
+This guide details the process of modifying a standard Raspberry Pi Camera (V1.3) by removing its internal Infrared (IR) cut-off filter. This modification is essential for the Ecophysiometer, allowing the sensor to detect the near-IR wavelengths needed for comprehensive absorbance and fluorescence measurements.
+
+## IMPORTANT DISCLAIMER
+
+This is a high-risk, delicate procedure. By proceeding, you accept the risk that you may permanently destroy your Raspberry Pi Camera. The actual image sensor is extremely fragile; touching it, scratching it, or getting debris on it will render the camera useless.
+
+Though the process is straight forward for V2 cameras and there's even a no-IR filter alternative, this is not the case for V1.3 cameras. Thus, the intent of this tutorial is to describe the necessary steps to remove the lens and the IR filter of the camera so it serves its role as the sensor.
+
+Basically, the goal is to go through the steps necessary to do this transition:
+
+![Standard Raspberry Pi Camera Module V1.3 with ribbon cable before modification.](./Photos/0.jpg){width="40%"} <font size=35>⮕ </font> ![final sensor](./Photos/10.jpg){width="40%"}
+
+Before handling the camera, you must protect the electronic components from Electrostatic Discharge (ESD). A tiny spark you cannot even feel can permanently "brick" the camera sensor.
+
+-   Best Practice: Wear an anti-static wrist strap connected to a known ground.
+
+-   Alternative: If you do not have professional ESD gear, work barefoot while maintaining contact with a non-insulated floor (like stone or tile) to dissipate static buildup.
+
+-   Workspace: Avoid working on carpets or wearing wool/synthetic clothing that generates static.
+
+-   Secure the Board: Use a small amount of adhesive putty to fix the camera board to your clean workspace to prevent it from slipping during the delicate prying steps.
+
+## Tools Required
+
+-   1x Raspberry Pi Camera V1.3
+
+-   1x Precision hobby knife or scalpel (e.g., X-Acto knife with a fine, sharp blade)
+
+-   1x Fine-tip tweezers
+
+-   Adhesive putty (e.g., Blu-Tack) or double-sided tape (to secure the camera board)
+
+-   A well-lit, clean workspace (a magnification lamp is highly recommended)
+
+-   Optional but recommended: Small, clean, soft-bristled brush (like a camera lens brush) or a can of compressed air.
+
+## Understanding the Components
+
+Before you start, familiarize yourself with the anatomy of the camera module. These are not formal names, but helpfully will help us avoid confusion:
+
+-   **Camera Board**: The green printed circuit board. This is the part that communicates the raspberry pi with the sensor, making it a functional camera.
+
+![Standard Raspberry Pi Camera Module V1.3 board.](./Photos/1.jpg)
+
+-   **Black Plastic Holder**: The square plastic glued to the board. It comes with double tape which you have to peel of so yuo can glue it to the board for it to stay at a fixed position. It contains the lens, the IR filter and the sensor.
+
+![Plastic holder, containing the sensor and the optical components](./Photos/4.jpg)
+
+-   **Lens Assembly**: The circular, threaded part screwed into the holder.
+
+-   **IR Filter**: A tiny, square piece of glass (often with a greenish or yellowish coating) located inside the black plastic holder, directly above the actual sensor chip. This is your target.
+
+![View of the optical component with the lens removed, exposing the IR filter (redish colour)](./Photos/6.jpg)
+
+## Step-by-Step Guide
+
+### Step 1: Preparation
+
+Secure the Raspberry Pi Camera board to your workspace using a small amount of adhesive putty or double-sided tape. This prevents the board from slipping while you perform the delicate cuts. Ensure your workspace is as dust-free as possible.
+
+### Step 2: Unplug the Black Plastic Holder so you can comfortably work on it.
+
+### Step 3: Cutting away the Plastic Holder
+
+This is the most critical and dangerous step. Your goal is to separate the black plastic holder from the red circuit board without the knife slipping and destroying the sensor chip underneath.
+
+Use the tip of your scalpel to apply gentle, persistent pressure at one of the corners where the plastic holder meets the red board. The holder is held on by a strong adhesive.
+
+![Applying gentle, persistent pressure with a precision blade at the corner of the black plastic holder.](./Photos/5.jpg)
+
+Continue carefully prying at each corner. Do not rush. You are trying to break the glue's bond, not cut through the board itself.
+
+As the glue starts to give, the holder will lift. Carefully remove it. Do not touch the silver sensor chip exposed on the board.
+
+### Step 4: Removing the IR Filter
+
+Now that the holder is removed, look inside it from the bottom (the side that was glued to the board). You will see the tiny, square IR cut-off filter.
+
+![Camera with the square IR filter exposed](./Photos/6.jpg)
+
+The filter is typically held in place by a ring of adhesive. Use the very tip of your scalpel to carefully pry the edge of the glass filter.
+
+Apply gentle pressure until the filter pops out of the plastic holder. You can now dispose of the filter.
+
+Verification: Ensure no broken glass shards or debris are left inside the plastic holder. Use a clean, soft brush or compressed air to remove any contaminants. Do not blow on it with your mouth.
+
+![The successfully removed square glass IR filter alongside the lens assembly.](./Photos/7.jpg)
+
+### Step 5: Reassembly
+
+Look closely at the silver sensor chip on the red board. It must be perfectly clean. If there is any debris, very carefully remove it with a clean brush or compressed air. NEVER touch the sensor surface with your fingers, a cloth, or any hard tool.
+
+Mount the sensor back into the board by plugging the connector. Peel of the tape to fix the sensor to the board. At the end, the camera should look like this:
+
+![End result: Sensor was fixed with the tape and ribbon was plugged into the board's connector during reassembly](./Photos/10.jpg) 
+
+When gluing the plastic holder back onto the board, ensure it is perfectly centered over the sensor chip to prevent horizontal spectral offsets in the ImageProcessor.py alignment phase.
+
+## Testing Your Modified Camera
+
+Put it inside the Ecophysiometer housing and try taking a photo with the white absorbance LED turned on. You whould be able to see a rainbow:
+
+![Representative rainbow spectrum captured by the modified sensor inside the housing to verify successful IR filter removal.](./Photos/measurement0.jpg)
